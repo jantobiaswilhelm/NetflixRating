@@ -1,0 +1,170 @@
+/* =============================================================
+   NetflixRating — Badge and overlay styles (Netflix dark theme)
+   ============================================================= */
+
+/* Card badge: bottom-left overlay on poster */
+.nr-rating-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  display: flex;
+  gap: 6px;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.82);
+  border-radius: 4px;
+  z-index: 99;
+  pointer-events: none;
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  overflow: visible;
+}
+
+/* Top 10 cards: position on the right side to avoid the rank number */
+.nr-rating-badge.nr-top10 {
+  left: auto;
+  right: 4px;
+}
+
+/* Modal rating pills container */
+.nr-modal-ratings {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  margin: 4px 0 8px 0;
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1;
+}
+
+/* Individual rating item */
+.nr-rating-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+/* Modal items are larger pill-shaped */
+.nr-modal-ratings .nr-rating-item {
+  background: rgba(51, 51, 51, 0.9);
+  padding: 5px 10px;
+  border-radius: 4px;
+  gap: 5px;
+  transition: background 0.15s ease;
+}
+
+.nr-modal-ratings .nr-rating-item:hover {
+  background: rgba(80, 80, 80, 0.9);
+}
+
+/* Logo images */
+.nr-logo {
+  height: 12px;
+  width: auto;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.nr-logo-rt {
+  height: 13px;
+}
+
+.nr-logo-lb {
+  height: 12px;
+}
+
+.nr-modal-ratings .nr-logo {
+  height: 18px;
+}
+
+.nr-modal-ratings .nr-logo-rt {
+  height: 20px;
+}
+
+.nr-modal-ratings .nr-logo-lb {
+  height: 18px;
+}
+
+/* Scale and label text (detailed mode) */
+.nr-scale {
+  font-size: 8px;
+  color: #999;
+  font-weight: 400;
+}
+
+.nr-modal-ratings .nr-scale {
+  font-size: 11px;
+}
+
+.nr-label {
+  font-size: 8px;
+  color: #999;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.nr-modal-ratings .nr-label {
+  font-size: 10px;
+}
+
+/* Rating value */
+.nr-value {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.nr-modal-ratings .nr-value {
+  font-size: 14px;
+}
+
+/* RT freshness colors */
+.nr-rt-fresh .nr-value {
+  color: #fa320a;
+}
+
+.nr-rt-rotten .nr-value {
+  color: #0ac855;
+}
+
+/* Shimmer loading animation */
+.nr-shimmer {
+  overflow: hidden;
+  min-width: 60px;
+  min-height: 16px;
+}
+
+.nr-shimmer-bar {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: nr-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes nr-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Ensure card containers can hold the absolute badge */
+.slider-item .boxart-container,
+.title-card .boxart-container,
+.title-card-container .boxart-container,
+[class*="title-card"] .boxart-container,
+.slider-item .ptrack-content,
+.title-card .ptrack-content,
+.title-card-container .ptrack-content {
+  position: relative !important;
+  overflow: visible !important;
+}
