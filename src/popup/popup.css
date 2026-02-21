@@ -172,31 +172,18 @@ body {
   font-size: 13px;
 }
 
-.source-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
+.source-logo {
+  height: 16px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+.source-logo-rt {
   height: 18px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
 }
 
-.source-icon.imdb {
-  background: #f5c518;
-  color: #000;
-}
-
-.source-icon.rt {
-  background: #fa320a;
-  color: #fff;
-}
-
-.source-icon.lb {
-  background: #00e054;
-  color: #000;
+.source-logo-lb {
+  height: 16px;
 }
 
 /* Custom checkbox toggle */
