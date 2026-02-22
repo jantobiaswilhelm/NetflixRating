@@ -1,23 +1,14 @@
 /**
- * Rotten Tomatoes scraper.
- * Fetches the RT page and extracts critics + audience scores from inline JS data.
+ * Rotten Tomatoes client.
+ * Uses RT's Algolia search index to find the correct movie/show,
+ * then returns scores directly from search results.
  */
 
 var RTClient = {
-  /**
-   * Generate an RT slug from a title.
-   * "The Shawshank Redemption" → "the_shawshank_redemption"
-   */
-  toSlug: function(title) {
-    return title
-      .toLowerCase()
-      .replace(/['']/g, '')
-      .replace(/&/g, 'and')
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '');
-  },
+  // RT's public Algolia search credentials (embedded in rottentomatoes.com frontend)
+  ALGOLIA_APP_ID: '79FRDP12PN',
+  ALGOLIA_API_KEY: '175588f6e5f8319b27702e4cc4013561',
+  ALGOLIA_INDEX: 'content_rt',
 
   /**
    * Normalize a title for comparison: lowercase, strip articles, punctuation, whitespace.
@@ -31,21 +22,15 @@ var RTClient = {
 
   /**
    * Check if two titles are similar enough to be the same movie.
-   * Uses normalized comparison — one must contain the other,
-   * or they must match closely.
    */
   _titlesMatch: function(searched, found) {
     var a = this._normalizeForCompare(searched);
     var b = this._normalizeForCompare(found);
     if (!a || !b) return false;
 
-    // Exact match after normalization
     if (a === b) return true;
-
-    // One contains the other (handles subtitles, etc.)
     if (a.includes(b) || b.includes(a)) return true;
 
-    // Check if they share a long common prefix (at least 80% of shorter string)
     var minLen = Math.min(a.length, b.length);
     var common = 0;
     for (var i = 0; i < minLen; i++) {
@@ -58,164 +43,116 @@ var RTClient = {
   },
 
   /**
-   * Extract the movie/show title from the RT HTML page.
+   * Search RT via Algolia and pick the best matching result.
+   * Considers title similarity and year proximity.
    */
-  _extractPageTitle: function(html) {
-    // Try <title> tag: "Movie Name - Rotten Tomatoes"
-    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (titleMatch) {
-      var pageTitle = titleMatch[1]
-        .replace(/\s*[-–|]\s*Rotten Tomatoes.*$/i, '')
-        .trim();
-      if (pageTitle) return pageTitle;
-    }
+  _searchAndMatch: async function(title, year) {
+    var params = new URLSearchParams({
+      query: title,
+      hitsPerPage: '10',
+      'x-algolia-application-id': this.ALGOLIA_APP_ID,
+      'x-algolia-api-key': this.ALGOLIA_API_KEY,
+    });
 
-    // Try JSON-LD name
-    var jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-    if (jsonLdMatch) {
-      try {
-        var data = JSON.parse(jsonLdMatch[1]);
-        if (data.name) return data.name;
-      } catch (e) {}
-    }
+    var url = 'https://' + this.ALGOLIA_APP_ID + '-dsn.algolia.net/1/indexes/'
+      + this.ALGOLIA_INDEX + '?' + params.toString();
 
-    return null;
-  },
-
-  /**
-   * Extract the release year from an RT page.
-   * Looks in JSON-LD dateCreated/datePublished, <title> tag, and inline metadata.
-   */
-  _extractPageYear: function(html) {
-    // Try JSON-LD dateCreated or datePublished
-    var jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-    if (jsonLdMatch) {
-      try {
-        var data = JSON.parse(jsonLdMatch[1]);
-        var dateStr = data.dateCreated || data.datePublished;
-        if (dateStr) {
-          var yearMatch = dateStr.match(/\b(19|20)\d{2}\b/);
-          if (yearMatch) return yearMatch[0];
-        }
-      } catch (e) {}
-    }
-
-    // Try <title> tag: "Frankenstein (2025)" or "Frankenstein 2025"
-    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    if (titleMatch) {
-      var yearInTitle = titleMatch[1].match(/\(?(19|20)\d{2}\)?/);
-      if (yearInTitle) return yearInTitle[0].replace(/[()]/g, '');
-    }
-
-    // Try meta tags or release info
-    var metaMatch = html.match(/release[- ]?date[^>]*>\s*[^<]*\b((?:19|20)\d{2})\b/i);
-    if (metaMatch) return metaMatch[1];
-
-    // Try releaseDateText in inline JS
-    var releaseDateMatch = html.match(/"releaseDateText"\s*:\s*"[^"]*\b((?:19|20)\d{2})\b/);
-    if (releaseDateMatch) return releaseDateMatch[1];
-
-    return null;
-  },
-
-  /**
-   * Fetch RT scores for a title.
-   * Tries movie page first (/m/), then TV page (/tv/).
-   * Validates that the fetched page matches the searched title.
-   * @returns {{ critics: string|null, audience: string|null, url: string|null } | null}
-   */
-  fetchScores: async function(title, year) {
-    if (!title) return null;
-
-    var slug = this.toSlug(title);
-
-    // When year is available, try year-specific URL first (more precise)
-    if (year) {
-      var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug + '_' + year, title, year);
-      if (result) return result;
-    }
-
-    // Try bare movie page
-    var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug, title, year);
-    if (result) return result;
-
-    // Try TV page
-    result = await this._tryFetch('https://www.rottentomatoes.com/tv/' + slug, title, year);
-    if (result) return result;
-
-    return null;
-  },
-
-  _tryFetch: async function(url, searchedTitle, searchedYear) {
     try {
       var response = await fetch(url);
-      if (!response.ok) return null;
-
-      var html = await response.text();
-
-      // Validate that the page is for the correct movie
-      if (searchedTitle) {
-        var pageTitle = this._extractPageTitle(html);
-        if (pageTitle && !this._titlesMatch(searchedTitle, pageTitle)) {
-          console.warn('[NetflixRating] RT title mismatch: searched "' + searchedTitle + '", found "' + pageTitle + '" at ' + url);
-          return null;
-        }
+      if (!response.ok) {
+        console.warn('[NetflixRating] RT search HTTP error:', response.status);
+        return null;
       }
 
-      // Validate year if available — reject if page year differs by more than 1
-      if (searchedYear) {
-        var pageYear = this._extractPageYear(html);
-        if (pageYear) {
-          var diff = Math.abs(parseInt(searchedYear, 10) - parseInt(pageYear, 10));
-          if (diff > 1) {
-            console.warn('[NetflixRating] RT year mismatch: searched ' + searchedYear + ', found ' + pageYear + ' at ' + url);
-            return null;
-          }
-        }
-      }
+      var data = await response.json();
+      if (!data.hits || data.hits.length === 0) return null;
 
-      return this._parseScores(html, url);
+      return this._pickBestMatch(data.hits, title, year);
     } catch (e) {
-      console.warn('[NetflixRating] RT fetch error:', e);
+      console.warn('[NetflixRating] RT search error:', e);
       return null;
     }
   },
 
   /**
-   * Extract critics and audience scores from inline JS data.
+   * Pick the best match from search results.
+   * Filters by title similarity, then prefers exact year match,
+   * then most recent if no year provided.
    */
-  _parseScores: function(html, url) {
-    var critics = null;
-    var audience = null;
+  _pickBestMatch: function(hits, searchedTitle, searchedYear) {
+    var self = this;
 
-    // Extract criticsScore.score from inline JS
-    var criticsMatch = html.match(/"criticsScore"\s*:\s*\{[^}]*"score"\s*:\s*"(\d+)"/);
-    if (criticsMatch) {
-      critics = criticsMatch[1] + '%';
+    // Filter to title matches only
+    var matches = hits.filter(function(hit) {
+      return hit.title && self._titlesMatch(searchedTitle, hit.title);
+    });
+
+    if (matches.length === 0) {
+      console.warn('[NetflixRating] RT search: no title match for "' + searchedTitle + '" in', hits.map(function(h) { return h.title; }));
+      return null;
     }
 
-    // Extract audienceScore.score from inline JS
-    var audienceMatch = html.match(/"audienceScore"\s*:\s*\{[^}]*"score"\s*:\s*"(\d+)"/);
-    if (audienceMatch) {
-      audience = audienceMatch[1] + '%';
+    // If we have a year, prefer exact or close year match
+    if (searchedYear) {
+      var yearNum = parseInt(searchedYear, 10);
+
+      // Exact year match
+      var exact = matches.filter(function(h) { return h.releaseYear === yearNum; });
+      if (exact.length > 0) return exact[0];
+
+      // Within 1 year
+      var close = matches.filter(function(h) {
+        return h.releaseYear && Math.abs(h.releaseYear - yearNum) <= 1;
+      });
+      if (close.length > 0) return close[0];
     }
 
-    // Also try JSON-LD for critics as fallback
-    if (!critics) {
-      var jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-      if (jsonLdMatch) {
-        try {
-          var data = JSON.parse(jsonLdMatch[1]);
-          if (data.aggregateRating && data.aggregateRating.ratingValue) {
-            critics = data.aggregateRating.ratingValue + '%';
-          }
-        } catch (e) {}
-      }
-    }
+    // No year or no year match: prefer most recent release
+    matches.sort(function(a, b) {
+      return (b.releaseYear || 0) - (a.releaseYear || 0);
+    });
+
+    return matches[0];
+  },
+
+  /**
+   * Build the RT page URL from a search hit's vanity slug and type.
+   */
+  _buildUrl: function(hit) {
+    var prefix = hit.type === 'tvSeries' ? '/tv/' : '/m/';
+    return 'https://www.rottentomatoes.com' + prefix + hit.vanity;
+  },
+
+  /**
+   * Fetch RT scores for a title.
+   * Uses Algolia search to find the correct movie/show, avoiding slug-guessing mistakes.
+   * @returns {{ critics: string|null, audience: string|null, url: string|null } | null}
+   */
+  fetchScores: async function(title, year) {
+    if (!title) return null;
+
+    var hit = await this._searchAndMatch(title, year);
+    if (!hit) return null;
+
+    var rt = hit.rottenTomatoes;
+    if (!rt) return null;
+
+    var critics = typeof rt.criticsScore === 'number' ? rt.criticsScore + '%' : null;
+    var audience = typeof rt.audienceScore === 'number' ? rt.audienceScore + '%' : null;
 
     if (!critics && !audience) return null;
 
-    console.log('[NetflixRating] RT parsed:', { critics: critics, audience: audience, url: url });
+    var url = this._buildUrl(hit);
+
+    console.log('[NetflixRating] RT matched:', {
+      searched: title,
+      found: hit.title,
+      year: hit.releaseYear,
+      critics: critics,
+      audience: audience,
+      url: url,
+    });
+
     return { critics: critics, audience: audience, url: url };
   },
 };
