@@ -83,6 +83,42 @@ var RTClient = {
   },
 
   /**
+   * Extract the release year from an RT page.
+   * Looks in JSON-LD dateCreated/datePublished, <title> tag, and inline metadata.
+   */
+  _extractPageYear: function(html) {
+    // Try JSON-LD dateCreated or datePublished
+    var jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    if (jsonLdMatch) {
+      try {
+        var data = JSON.parse(jsonLdMatch[1]);
+        var dateStr = data.dateCreated || data.datePublished;
+        if (dateStr) {
+          var yearMatch = dateStr.match(/\b(19|20)\d{2}\b/);
+          if (yearMatch) return yearMatch[0];
+        }
+      } catch (e) {}
+    }
+
+    // Try <title> tag: "Frankenstein (2025)" or "Frankenstein 2025"
+    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch) {
+      var yearInTitle = titleMatch[1].match(/\(?(19|20)\d{2}\)?/);
+      if (yearInTitle) return yearInTitle[0].replace(/[()]/g, '');
+    }
+
+    // Try meta tags or release info
+    var metaMatch = html.match(/release[- ]?date[^>]*>\s*[^<]*\b((?:19|20)\d{2})\b/i);
+    if (metaMatch) return metaMatch[1];
+
+    // Try releaseDateText in inline JS
+    var releaseDateMatch = html.match(/"releaseDateText"\s*:\s*"[^"]*\b((?:19|20)\d{2})\b/);
+    if (releaseDateMatch) return releaseDateMatch[1];
+
+    return null;
+  },
+
+  /**
    * Fetch RT scores for a title.
    * Tries movie page first (/m/), then TV page (/tv/).
    * Validates that the fetched page matches the searched title.
@@ -93,24 +129,24 @@ var RTClient = {
 
     var slug = this.toSlug(title);
 
-    // Try movie page first
-    var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug, title);
-    if (result) return result;
-
-    // Try with year appended
+    // When year is available, try year-specific URL first (more precise)
     if (year) {
-      result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug + '_' + year, title);
+      var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug + '_' + year, title, year);
       if (result) return result;
     }
 
+    // Try bare movie page
+    var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug, title, year);
+    if (result) return result;
+
     // Try TV page
-    result = await this._tryFetch('https://www.rottentomatoes.com/tv/' + slug, title);
+    result = await this._tryFetch('https://www.rottentomatoes.com/tv/' + slug, title, year);
     if (result) return result;
 
     return null;
   },
 
-  _tryFetch: async function(url, searchedTitle) {
+  _tryFetch: async function(url, searchedTitle, searchedYear) {
     try {
       var response = await fetch(url);
       if (!response.ok) return null;
@@ -123,6 +159,18 @@ var RTClient = {
         if (pageTitle && !this._titlesMatch(searchedTitle, pageTitle)) {
           console.warn('[NetflixRating] RT title mismatch: searched "' + searchedTitle + '", found "' + pageTitle + '" at ' + url);
           return null;
+        }
+      }
+
+      // Validate year if available — reject if page year differs by more than 1
+      if (searchedYear) {
+        var pageYear = this._extractPageYear(html);
+        if (pageYear) {
+          var diff = Math.abs(parseInt(searchedYear, 10) - parseInt(pageYear, 10));
+          if (diff > 1) {
+            console.warn('[NetflixRating] RT year mismatch: searched ' + searchedYear + ', found ' + pageYear + ' at ' + url);
+            return null;
+          }
         }
       }
 

@@ -67,25 +67,55 @@ var LetterboxdClient = {
     return null;
   },
 
+  /**
+   * Extract the release year from a Letterboxd page via JSON-LD datePublished.
+   */
+  _extractPageYear: function(html) {
+    var jsonLdRegex = /<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi;
+    var match;
+    while ((match = jsonLdRegex.exec(html)) !== null) {
+      try {
+        var jsonText = match[1]
+          .replace(/\/\*\s*<!\[CDATA\[\s*\*\//g, '')
+          .replace(/\/\*\s*\]\]>\s*\*\//g, '')
+          .trim();
+        var data = JSON.parse(jsonText);
+        var dateStr = data.dateCreated || data.datePublished || data.releasedEvent;
+        if (dateStr) {
+          var yearMatch = (typeof dateStr === 'string' ? dateStr : '').match(/\b(19|20)\d{2}\b/);
+          if (yearMatch) return yearMatch[0];
+        }
+      } catch (e) {}
+    }
+    // Fallback: year in <title>
+    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch) {
+      var yearInTitle = titleMatch[1].match(/\(?(19|20)\d{2}\)?/);
+      if (yearInTitle) return yearInTitle[0].replace(/[()]/g, '');
+    }
+    return null;
+  },
+
   fetchRating: async function(title, year) {
     if (!title) return null;
 
     var slug = this.toSlug(title);
-    var baseUrl = 'https://letterboxd.com/film/' + slug + '/';
 
-    var result = await this._tryFetch(baseUrl, title);
-    if (result) return result;
-
+    // When year is available, try year-specific URL first (more precise)
     if (year) {
       var yearUrl = 'https://letterboxd.com/film/' + slug + '-' + year + '/';
-      result = await this._tryFetch(yearUrl, title);
+      var result = await this._tryFetch(yearUrl, title, year);
       if (result) return result;
     }
+
+    // Try bare slug
+    var result = await this._tryFetch('https://letterboxd.com/film/' + slug + '/', title, year);
+    if (result) return result;
 
     return null;
   },
 
-  _tryFetch: async function(url, searchedTitle) {
+  _tryFetch: async function(url, searchedTitle, searchedYear) {
     try {
       var response = await fetch(url);
       if (!response.ok) return null;
@@ -98,6 +128,18 @@ var LetterboxdClient = {
         if (pageTitle && !this._titlesMatch(searchedTitle, pageTitle)) {
           console.warn('[NetflixRating] Letterboxd title mismatch: searched "' + searchedTitle + '", found "' + pageTitle + '" at ' + url);
           return null;
+        }
+      }
+
+      // Validate year if available — reject if page year differs by more than 1
+      if (searchedYear) {
+        var pageYear = this._extractPageYear(html);
+        if (pageYear) {
+          var diff = Math.abs(parseInt(searchedYear, 10) - parseInt(pageYear, 10));
+          if (diff > 1) {
+            console.warn('[NetflixRating] Letterboxd year mismatch: searched ' + searchedYear + ', found ' + pageYear + ' at ' + url);
+            return null;
+          }
         }
       }
 
