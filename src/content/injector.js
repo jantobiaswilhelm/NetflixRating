@@ -104,8 +104,9 @@ NR.injector = {
       if (showAudience && ratings.rtAudience) {
         const status = this._rtStatus(ratings.rtAudience);
         const item = document.createElement('span');
-        item.className = `nr-rating-item nr-rt nr-rt-audience`;
-        const logo = `<img class="nr-logo nr-logo-rt" src="${this._assetUrl('rt-fresh.svg')}" alt="RT Audience">`;
+        item.className = `nr-rating-item nr-rt nr-rt-${status}`;
+        const audienceLogoFile = status === 'fresh' ? 'rt-fresh.svg' : 'rt-rotten.svg';
+        const logo = `<img class="nr-logo nr-logo-rt" src="${this._assetUrl(audienceLogoFile)}" alt="RT Audience">`;
         if (detailed) {
           item.innerHTML = logo
             + `<span class="nr-value">${ratings.rtAudience}</span>`

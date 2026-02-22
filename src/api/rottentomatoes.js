@@ -20,8 +20,72 @@ var RTClient = {
   },
 
   /**
+   * Normalize a title for comparison: lowercase, strip articles, punctuation, whitespace.
+   */
+  _normalizeForCompare: function(title) {
+    return title
+      .toLowerCase()
+      .replace(/^(the|a|an)\s+/i, '')
+      .replace(/[^a-z0-9]/g, '');
+  },
+
+  /**
+   * Check if two titles are similar enough to be the same movie.
+   * Uses normalized comparison — one must contain the other,
+   * or they must match closely.
+   */
+  _titlesMatch: function(searched, found) {
+    var a = this._normalizeForCompare(searched);
+    var b = this._normalizeForCompare(found);
+    if (!a || !b) return false;
+
+    // Exact match after normalization
+    if (a === b) return true;
+
+    // One contains the other (handles subtitles, etc.)
+    if (a.includes(b) || b.includes(a)) return true;
+
+    // Check if they share a long common prefix (at least 80% of shorter string)
+    var minLen = Math.min(a.length, b.length);
+    var common = 0;
+    for (var i = 0; i < minLen; i++) {
+      if (a[i] === b[i]) common++;
+      else break;
+    }
+    if (common >= minLen * 0.8 && common >= 4) return true;
+
+    return false;
+  },
+
+  /**
+   * Extract the movie/show title from the RT HTML page.
+   */
+  _extractPageTitle: function(html) {
+    // Try <title> tag: "Movie Name - Rotten Tomatoes"
+    var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch) {
+      var pageTitle = titleMatch[1]
+        .replace(/\s*[-–|]\s*Rotten Tomatoes.*$/i, '')
+        .trim();
+      if (pageTitle) return pageTitle;
+    }
+
+    // Try JSON-LD name
+    var jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    if (jsonLdMatch) {
+      try {
+        var data = JSON.parse(jsonLdMatch[1]);
+        if (data.name) return data.name;
+      } catch (e) {}
+    }
+
+    return null;
+  },
+
+  /**
    * Fetch RT scores for a title.
    * Tries movie page first (/m/), then TV page (/tv/).
+   * Validates that the fetched page matches the searched title.
    * @returns {{ critics: string|null, audience: string|null, url: string|null } | null}
    */
   fetchScores: async function(title, year) {
@@ -30,28 +94,38 @@ var RTClient = {
     var slug = this.toSlug(title);
 
     // Try movie page first
-    var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug);
+    var result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug, title);
     if (result) return result;
 
     // Try with year appended
     if (year) {
-      result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug + '_' + year);
+      result = await this._tryFetch('https://www.rottentomatoes.com/m/' + slug + '_' + year, title);
       if (result) return result;
     }
 
     // Try TV page
-    result = await this._tryFetch('https://www.rottentomatoes.com/tv/' + slug);
+    result = await this._tryFetch('https://www.rottentomatoes.com/tv/' + slug, title);
     if (result) return result;
 
     return null;
   },
 
-  _tryFetch: async function(url) {
+  _tryFetch: async function(url, searchedTitle) {
     try {
       var response = await fetch(url);
       if (!response.ok) return null;
 
       var html = await response.text();
+
+      // Validate that the page is for the correct movie
+      if (searchedTitle) {
+        var pageTitle = this._extractPageTitle(html);
+        if (pageTitle && !this._titlesMatch(searchedTitle, pageTitle)) {
+          console.warn('[NetflixRating] RT title mismatch: searched "' + searchedTitle + '", found "' + pageTitle + '" at ' + url);
+          return null;
+        }
+      }
+
       return this._parseScores(html, url);
     } catch (e) {
       console.warn('[NetflixRating] RT fetch error:', e);

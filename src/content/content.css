@@ -123,11 +123,11 @@
 
 /* RT freshness colors */
 .nr-rt-fresh .nr-value {
-  color: #fa320a;
+  color: #0ac855;
 }
 
 .nr-rt-rotten .nr-value {
-  color: #0ac855;
+  color: #fa320a;
 }
 
 /* Shimmer loading animation */
