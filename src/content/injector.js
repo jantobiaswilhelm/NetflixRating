@@ -183,6 +183,12 @@ NR.injector = {
 
     target.appendChild(badge);
     cardEl.setAttribute(NR.PROCESSED_ATTR, 'true');
+
+    // Store rating values as data attributes for sorter
+    if (ratings.imdb) cardEl.setAttribute('data-nr-imdb', ratings.imdb);
+    if (ratings.rtCritics || ratings.rt) cardEl.setAttribute('data-nr-rt', ratings.rtCritics || ratings.rt);
+    if (ratings.rtAudience) cardEl.setAttribute('data-nr-rt-audience', ratings.rtAudience);
+    if (ratings.letterboxd) cardEl.setAttribute('data-nr-lb', ratings.letterboxd);
   },
 
   /**

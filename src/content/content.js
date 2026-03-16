@@ -98,6 +98,9 @@
         NR.injector.injectCardBadge(card, ratings, settings);
       }
     }
+
+    // Trigger sorting after badges are injected
+    NR.sorter.onRatingsReady();
   }
 
   /**
@@ -119,6 +122,8 @@
    */
   function handleSettingsChanged(newSettings) {
     settings = { ...NR.DEFAULTS.settings, ...newSettings };
+    // Update sorter with new settings
+    NR.sorter.onSettingsChanged(settings);
     // Remove all existing badges and re-process
     NR.injector.removeAll();
     NR.observer._scanExistingCards();
@@ -142,6 +147,9 @@
         handleSettingsChanged(message.settings);
       }
     });
+
+    // Initialize sorter for genre pages
+    NR.sorter.init(settings);
 
     // Start observing
     NR.observer.start(handleVisibleCards, handleModal);

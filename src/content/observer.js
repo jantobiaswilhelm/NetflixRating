@@ -103,6 +103,10 @@ NR.observer = {
     const check = () => {
       if (location.href !== this._lastUrl) {
         this._lastUrl = location.href;
+        // Re-init sorter on navigation
+        if (NR.sorter && NR.sorter._settings) {
+          NR.sorter.init(NR.sorter._settings);
+        }
         // Small delay for Netflix to render new content
         setTimeout(() => this._scanExistingCards(), 500);
       }

@@ -54,6 +54,8 @@ NR.DEFAULTS = {
     rtScoreType: 'audience',
     showLetterboxd: true,
     displayStyle: 'compact',
+    enableGenreSort: false,
+    genreSortBy: 'imdb',
   },
   DEBOUNCE_CARDS: 200,
   DEBOUNCE_MODALS: 300,

@@ -14,6 +14,7 @@
     showImdb: $('#showImdb'),
     showRottenTomatoes: $('#showRottenTomatoes'),
     showLetterboxd: $('#showLetterboxd'),
+    enableGenreSort: $('#enableGenreSort'),
     apiUsage: $('#apiUsage'),
     cacheCount: $('#cacheCount'),
     usageWarning: $('#usageWarning'),
@@ -38,6 +39,16 @@
     els.showImdb.checked = settings.showImdb !== false;
     els.showRottenTomatoes.checked = settings.showRottenTomatoes !== false;
     els.showLetterboxd.checked = settings.showLetterboxd !== false;
+    els.enableGenreSort.checked = settings.enableGenreSort === true;
+
+    // Genre sort source radio
+    const sortRadio = document.querySelector(
+      `input[name="genreSortBy"][value="${settings.genreSortBy || 'imdb'}"]`
+    );
+    if (sortRadio) sortRadio.checked = true;
+
+    // Show/hide genre sort sub-options
+    updateGenreSortVisibility();
 
     // RT score type radio
     const rtRadio = document.querySelector(
@@ -81,6 +92,7 @@
   function gatherSettings() {
     const styleRadio = document.querySelector('input[name="displayStyle"]:checked');
     const rtRadio = document.querySelector('input[name="rtScoreType"]:checked');
+    const sortRadio = document.querySelector('input[name="genreSortBy"]:checked');
     return {
       omdbApiKey: els.apiKey.value.trim(),
       showImdb: els.showImdb.checked,
@@ -88,7 +100,18 @@
       rtScoreType: rtRadio ? rtRadio.value : 'audience',
       showLetterboxd: els.showLetterboxd.checked,
       displayStyle: styleRadio ? styleRadio.value : 'compact',
+      enableGenreSort: els.enableGenreSort.checked,
+      genreSortBy: sortRadio ? sortRadio.value : 'imdb',
     };
+  }
+
+  function updateGenreSortVisibility() {
+    const sortOptions = document.getElementById('genreSortOptions');
+    if (els.enableGenreSort.checked) {
+      sortOptions.classList.remove('hidden');
+    } else {
+      sortOptions.classList.add('hidden');
+    }
   }
 
   function updateRtVisibility() {
@@ -158,6 +181,17 @@
       updateRtVisibility();
       saveSettings();
     });
+  });
+
+  // Genre sort toggle
+  els.enableGenreSort.addEventListener('change', () => {
+    updateGenreSortVisibility();
+    saveSettings();
+  });
+
+  // Genre sort source radios
+  document.querySelectorAll('input[name="genreSortBy"]').forEach(radio => {
+    radio.addEventListener('change', saveSettings);
   });
 
   // RT score type radios

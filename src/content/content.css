@@ -157,6 +157,67 @@
   100% { background-position: -200% 0; }
 }
 
+/* Sort bar (genre page sorting) */
+.nr-sort-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  margin: 8px 4% 4px;
+  background: rgba(0, 0, 0, 0.82);
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  z-index: 100;
+}
+
+.nr-sort-label {
+  color: #e5e5e5;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.nr-sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nr-sort-select {
+  padding: 4px 8px;
+  background: #2a2a2a;
+  color: #e5e5e5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+
+.nr-sort-select:focus {
+  border-color: #e50914;
+}
+
+.nr-sort-dir {
+  width: 28px;
+  height: 28px;
+  background: #2a2a2a;
+  color: #e5e5e5;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.nr-sort-dir:hover {
+  background: #444;
+}
+
 /* Ensure card containers can hold the absolute badge */
 .slider-item .boxart-container,
 .title-card .boxart-container,

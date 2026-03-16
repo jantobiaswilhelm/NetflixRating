@@ -123,6 +123,14 @@ body {
   background: #444;
 }
 
+/* Setting description text */
+.setting-desc {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #777;
+  line-height: 1.4;
+}
+
 /* Sub-option (indented below parent toggle) */
 .sub-option {
   margin-left: 36px;
