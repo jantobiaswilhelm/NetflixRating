@@ -218,6 +218,107 @@
   background: #444;
 }
 
+/* ---- Watched tracking ---- */
+
+/* Eye icon: bottom-right of poster, hidden until hover */
+.nr-watched-icon {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  pointer-events: auto;
+}
+
+.boxart-container:hover .nr-watched-icon,
+.title-card-container:hover .nr-watched-icon {
+  opacity: 1;
+}
+
+/* When watched: always visible, green tint */
+.nr-watched-icon.nr-is-watched {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.nr-watched-icon:hover {
+  background: rgba(70, 211, 105, 0.3);
+}
+
+.nr-watched-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Watched card dimming */
+.nr-watched .boxart-image,
+.nr-watched .boxart-image-in-padded-container {
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.nr-watched:hover .boxart-image,
+.nr-watched:hover .boxart-image-in-padded-container {
+  opacity: 0.85;
+}
+
+/* Green checkmark in top-right */
+.nr-watched-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+  pointer-events: none;
+}
+
+.nr-watched-check svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Modal watched button */
+.nr-modal-watched-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  margin: 4px 0 8px 0;
+  background: rgba(51, 51, 51, 0.9);
+  color: #fff;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.nr-modal-watched-btn:hover {
+  background: rgba(80, 80, 80, 0.9);
+}
+
+.nr-modal-watched-btn.nr-is-watched {
+  border-color: #46d369;
+  color: #46d369;
+}
+
 /* Ensure card containers can hold the absolute badge */
 .slider-item .boxart-container,
 .title-card .boxart-container,

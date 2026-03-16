@@ -229,12 +229,145 @@ NR.injector = {
   },
 
   /**
-   * Remove all injected badges from the page.
+   * Inject watched eye icon onto a card element.
+   */
+  injectWatchedIcon(cardEl, settings) {
+    if (!settings.enableWatched) return;
+    if (cardEl.querySelector('.nr-watched-icon')) return;
+
+    const id = NR.watched.extractId(cardEl);
+    if (!id) return;
+
+    const title = NR.extractor.fromCard(cardEl) || id;
+    const isWatched = NR.watched.isWatched(id);
+
+    const target = cardEl.querySelector('.boxart-container') || cardEl;
+
+    // Ensure relative positioning
+    if (getComputedStyle(target).position === 'static') {
+      target.style.position = 'relative';
+    }
+
+    // Create the eye icon button
+    const btn = document.createElement('div');
+    btn.className = 'nr-watched-icon' + (isWatched ? ' nr-is-watched' : '');
+    btn.appendChild(NR.watched.createEyeIcon(isWatched));
+    btn.title = isWatched ? 'Mark as unwatched' : 'Mark as watched';
+
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const nowWatched = await NR.watched.toggle(id, title);
+      this._updateCardWatchedState(cardEl, nowWatched);
+      // Update all other cards with the same ID
+      this._syncCardsById(id, nowWatched, cardEl);
+    });
+
+    target.appendChild(btn);
+
+    // Apply watched visual state
+    if (isWatched) {
+      target.classList.add('nr-watched');
+      if (!target.querySelector('.nr-watched-check')) {
+        target.appendChild(NR.watched.createCheckmark());
+      }
+    }
+  },
+
+  /**
+   * Update a card's watched visual state.
+   */
+  _updateCardWatchedState(cardEl, isWatched) {
+    const target = cardEl.querySelector('.boxart-container') || cardEl;
+    const btn = target.querySelector('.nr-watched-icon');
+
+    if (btn) {
+      btn.className = 'nr-watched-icon' + (isWatched ? ' nr-is-watched' : '');
+      btn.innerHTML = '';
+      btn.appendChild(NR.watched.createEyeIcon(isWatched));
+      btn.title = isWatched ? 'Mark as unwatched' : 'Mark as watched';
+    }
+
+    if (isWatched) {
+      target.classList.add('nr-watched');
+      if (!target.querySelector('.nr-watched-check')) {
+        target.appendChild(NR.watched.createCheckmark());
+      }
+    } else {
+      target.classList.remove('nr-watched');
+      const check = target.querySelector('.nr-watched-check');
+      if (check) check.remove();
+    }
+  },
+
+  /**
+   * Sync all visible cards with the same Netflix ID.
+   */
+  _syncCardsById(id, isWatched, excludeEl) {
+    document.querySelectorAll('.boxart-container').forEach(container => {
+      const parent = container.closest(NR.SELECTORS.TITLE_CARD) || container.parentElement;
+      if (parent === excludeEl) return;
+      const cardId = NR.watched.extractId(parent);
+      if (cardId === id) {
+        this._updateCardWatchedState(parent, isWatched);
+      }
+    });
+  },
+
+  /**
+   * Inject a watched button into a modal.
+   */
+  injectModalWatchedButton(modalEl, settings) {
+    if (!settings.enableWatched) return;
+    if (modalEl.querySelector('.nr-modal-watched-btn')) return;
+
+    const id = NR.watched.extractIdFromModal(modalEl);
+    if (!id) return;
+
+    const title = NR.extractor.fromMiniModal(modalEl) || NR.extractor.fromDetailModal(modalEl) || id;
+    const isWatched = NR.watched.isWatched(id);
+
+    const btn = document.createElement('button');
+    btn.className = 'nr-modal-watched-btn' + (isWatched ? ' nr-is-watched' : '');
+    btn.textContent = isWatched ? 'Watched \u2713' : 'Mark as Watched';
+
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const nowWatched = await NR.watched.toggle(id, title);
+      btn.className = 'nr-modal-watched-btn' + (nowWatched ? ' nr-is-watched' : '');
+      btn.textContent = nowWatched ? 'Watched \u2713' : 'Mark as Watched';
+      // Sync visible cards
+      this._syncCardsById(id, nowWatched, null);
+    });
+
+    // Insert after modal ratings or metadata
+    const ratingsEl = modalEl.querySelector('.' + NR.MODAL_BADGE_CLASS);
+    const metaData = modalEl.querySelector(
+      '.previewModal--detailsMetadata-left, .about-container, .previewModal--detailsMetadata'
+    );
+    const insertAfter = ratingsEl || metaData;
+
+    if (insertAfter && insertAfter.parentNode) {
+      insertAfter.parentNode.insertBefore(btn, insertAfter.nextSibling);
+    } else {
+      const content = modalEl.querySelector('.ptrack-container') || modalEl;
+      content.appendChild(btn);
+    }
+  },
+
+  /**
+   * Remove all injected badges and watched elements from the page.
    */
   removeAll() {
-    document.querySelectorAll('.' + NR.BADGE_CLASS + ', .' + NR.MODAL_BADGE_CLASS).forEach(el => el.remove());
+    document.querySelectorAll(
+      '.' + NR.BADGE_CLASS + ', .' + NR.MODAL_BADGE_CLASS
+      + ', .nr-watched-icon, .nr-watched-check, .nr-modal-watched-btn'
+    ).forEach(el => el.remove());
     document.querySelectorAll(`[${NR.PROCESSED_ATTR}]`).forEach(el => {
       el.removeAttribute(NR.PROCESSED_ATTR);
+    });
+    document.querySelectorAll('.nr-watched').forEach(el => {
+      el.classList.remove('nr-watched');
     });
   },
 };

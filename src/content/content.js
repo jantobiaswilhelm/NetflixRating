@@ -96,7 +96,13 @@
 
       for (const card of cardElements) {
         NR.injector.injectCardBadge(card, ratings, settings);
+        NR.injector.injectWatchedIcon(card, settings);
       }
+    }
+
+    // Inject watched icons on cards that had no ratings (already processed or no data)
+    for (const card of cards) {
+      NR.injector.injectWatchedIcon(card, settings);
     }
 
     // Trigger sorting after badges are injected
@@ -115,6 +121,7 @@
     if (!ratings) return;
 
     NR.injector.injectModalBadge(modalEl, ratings, settings);
+    NR.injector.injectModalWatchedButton(modalEl, settings);
   }
 
   /**
@@ -122,6 +129,8 @@
    */
   function handleSettingsChanged(newSettings) {
     settings = { ...NR.DEFAULTS.settings, ...newSettings };
+    // Update watched module with new settings
+    NR.watched._enabled = settings.enableWatched !== false;
     // Update sorter with new settings
     NR.sorter.onSettingsChanged(settings);
     // Remove all existing badges and re-process
@@ -134,6 +143,9 @@
    */
   async function init() {
     await loadSettings();
+
+    // Initialize watched module
+    await NR.watched.init(settings);
 
     // Check if API key is configured
     if (!settings.omdbApiKey && !settings.showLetterboxd) {

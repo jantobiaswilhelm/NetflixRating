@@ -19,6 +19,7 @@ var DEFAULT_SETTINGS = {
   rtScoreType: 'audience',
   showLetterboxd: true,
   displayStyle: 'compact',
+  enableWatched: true,
 };
 
 async function getSettings() {
@@ -211,6 +212,37 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     getSettings()
       .then(sendResponse)
       .catch(function() { sendResponse(DEFAULT_SETTINGS); });
+    return true;
+  }
+
+  if (message.type === 'GET_WATCHED') {
+    chrome.storage.local.get('nr_watched')
+      .then(function(result) { sendResponse(result.nr_watched || {}); })
+      .catch(function() { sendResponse({}); });
+    return true;
+  }
+
+  if (message.type === 'SAVE_WATCHED') {
+    chrome.storage.local.set({ nr_watched: message.data })
+      .then(function() { sendResponse({ ok: true }); })
+      .catch(function() { sendResponse({ ok: false }); });
+    return true;
+  }
+
+  if (message.type === 'CLEAR_WATCHED') {
+    chrome.storage.local.set({ nr_watched: {} })
+      .then(function() { sendResponse({ ok: true }); })
+      .catch(function() { sendResponse({ ok: false }); });
+    return true;
+  }
+
+  if (message.type === 'GET_WATCHED_COUNT') {
+    chrome.storage.local.get('nr_watched')
+      .then(function(result) {
+        var data = result.nr_watched || {};
+        sendResponse({ count: Object.keys(data).length });
+      })
+      .catch(function() { sendResponse({ count: 0 }); });
     return true;
   }
 

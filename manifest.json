@@ -23,6 +23,7 @@
         "src/utils/helpers.js",
         "src/content/extractor.js",
         "src/content/injector.js",
+        "src/content/watched.js",
         "src/content/sorter.js",
         "src/content/observer.js",
         "src/content/content.js"

@@ -15,6 +15,9 @@
     showRottenTomatoes: $('#showRottenTomatoes'),
     showLetterboxd: $('#showLetterboxd'),
     enableGenreSort: $('#enableGenreSort'),
+    enableWatched: $('#enableWatched'),
+    watchedCount: $('#watchedCount'),
+    clearWatched: $('#clearWatched'),
     apiUsage: $('#apiUsage'),
     cacheCount: $('#cacheCount'),
     usageWarning: $('#usageWarning'),
@@ -40,6 +43,10 @@
     els.showRottenTomatoes.checked = settings.showRottenTomatoes !== false;
     els.showLetterboxd.checked = settings.showLetterboxd !== false;
     els.enableGenreSort.checked = settings.enableGenreSort === true;
+    els.enableWatched.checked = settings.enableWatched !== false;
+
+    // Show/hide watched sub-options
+    updateWatchedVisibility();
 
     // Genre sort source radio
     const sortRadio = document.querySelector(
@@ -70,13 +77,15 @@
    * Load usage and cache stats.
    */
   async function loadStats() {
-    const [usage, stats] = await Promise.all([
+    const [usage, stats, watchedCount] = await Promise.all([
       sendMessage({ type: 'GET_USAGE' }),
       sendMessage({ type: 'GET_CACHE_STATS' }),
+      sendMessage({ type: 'GET_WATCHED_COUNT' }),
     ]);
 
     els.apiUsage.textContent = usage?.count || 0;
     els.cacheCount.textContent = stats?.active || 0;
+    els.watchedCount.textContent = watchedCount?.count || 0;
 
     // Show warning if approaching limit
     if (usage?.count >= 900) {
@@ -102,6 +111,7 @@
       displayStyle: styleRadio ? styleRadio.value : 'compact',
       enableGenreSort: els.enableGenreSort.checked,
       genreSortBy: sortRadio ? sortRadio.value : 'imdb',
+      enableWatched: els.enableWatched.checked,
     };
   }
 
@@ -111,6 +121,15 @@
       sortOptions.classList.remove('hidden');
     } else {
       sortOptions.classList.add('hidden');
+    }
+  }
+
+  function updateWatchedVisibility() {
+    const watchedInfo = document.getElementById('watchedInfo');
+    if (els.enableWatched.checked) {
+      watchedInfo.classList.remove('hidden');
+    } else {
+      watchedInfo.classList.add('hidden');
     }
   }
 
@@ -183,6 +202,12 @@
     });
   });
 
+  // Watched toggle
+  els.enableWatched.addEventListener('change', () => {
+    updateWatchedVisibility();
+    saveSettings();
+  });
+
   // Genre sort toggle
   els.enableGenreSort.addEventListener('change', () => {
     updateGenreSortVisibility();
@@ -202,6 +227,16 @@
   // Display style radios
   document.querySelectorAll('input[name="displayStyle"]').forEach(radio => {
     radio.addEventListener('change', saveSettings);
+  });
+
+  // Clear watched history
+  els.clearWatched.addEventListener('click', async () => {
+    await sendMessage({ type: 'CLEAR_WATCHED' });
+    els.watchedCount.textContent = '0';
+    els.clearWatched.textContent = 'Cleared!';
+    setTimeout(() => {
+      els.clearWatched.textContent = 'Clear Watched History';
+    }, 2000);
   });
 
   // Clear cache

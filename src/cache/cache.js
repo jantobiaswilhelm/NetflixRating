@@ -86,7 +86,7 @@ var RatingCache = {
     try {
       const all = await chrome.storage.local.get(null);
       const ratingKeys = Object.keys(all).filter(
-        k => k.startsWith('nr_') && k !== 'nr_daily_usage' && k !== 'nr_settings'
+        k => k.startsWith('nr_') && k !== 'nr_daily_usage' && k !== 'nr_settings' && k !== 'nr_watched'
       );
       if (ratingKeys.length > 0) {
         await chrome.storage.local.remove(ratingKeys);
@@ -103,7 +103,7 @@ var RatingCache = {
     try {
       const all = await chrome.storage.local.get(null);
       const ratingKeys = Object.keys(all).filter(
-        k => k.startsWith('nr_') && k !== 'nr_daily_usage' && k !== 'nr_settings'
+        k => k.startsWith('nr_') && k !== 'nr_daily_usage' && k !== 'nr_settings' && k !== 'nr_watched'
       );
       let expired = 0;
       const now = Date.now();

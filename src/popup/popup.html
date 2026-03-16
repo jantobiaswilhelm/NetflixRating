@@ -87,6 +87,26 @@
       </div>
     </section>
 
+    <!-- Watched Tracking -->
+    <section class="section">
+      <h2>Watched</h2>
+      <label class="toggle-row">
+        <span class="toggle-label">Mark Titles as Watched</span>
+        <input type="checkbox" id="enableWatched" checked>
+        <span class="toggle-switch"></span>
+      </label>
+      <p class="setting-desc">Track which titles you've watched. Shows an eye icon on cards and dims watched titles.</p>
+      <div id="watchedInfo" class="sub-option">
+        <div class="stats-grid" style="margin-bottom: 8px;">
+          <div class="stat">
+            <span class="stat-value" id="watchedCount">0</span>
+            <span class="stat-label">titles watched</span>
+          </div>
+        </div>
+        <button id="clearWatched" class="btn btn-secondary">Clear Watched History</button>
+      </div>
+    </section>
+
     <!-- Genre Sorting -->
     <section class="section">
       <h2>Sorting</h2>

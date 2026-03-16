@@ -44,6 +44,7 @@ NR.CACHE = {
   STORAGE_PREFIX: 'nr_',
   USAGE_KEY: 'nr_daily_usage',
   SETTINGS_KEY: 'nr_settings',
+  WATCHED_KEY: 'nr_watched',
 };
 
 NR.DEFAULTS = {
@@ -56,6 +57,7 @@ NR.DEFAULTS = {
     displayStyle: 'compact',
     enableGenreSort: false,
     genreSortBy: 'imdb',
+    enableWatched: true,
   },
   DEBOUNCE_CARDS: 200,
   DEBOUNCE_MODALS: 300,
